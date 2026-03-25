@@ -30,6 +30,13 @@ export async function apiLogin({ email, password }) {
 }
 
 // PUBLIC_INTERFACE
+export async function apiSignup({ name, email, password, role }) {
+  /** Auth signup. Expected endpoint: POST /api/auth/signup. */
+  const res = await http.post("/api/auth/signup", { name, email, password, role });
+  return res.data;
+}
+
+// PUBLIC_INTERFACE
 export async function apiGetDefects() {
   /** List defects. */
   const res = await http.get("/api/defects");
