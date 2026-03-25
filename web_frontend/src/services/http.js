@@ -82,10 +82,36 @@ export function toApiError(err) {
   /** Convert an axios error into {message, status, details}. */
   const status = err?.response?.status;
   const data = err?.response?.data;
+
+  // Ensure the UI always receives a renderable string. Some APIs return
+  // `{ code, details, message }` objects (or even nested objects) as `message`.
+  const pickStringMessage = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+    // Common API error object shapes:
+    // - { message: "..." }
+    // - { code, details, message: "..." }
+    if (typeof value === "object") {
+      if (typeof value.message === "string") return value.message;
+
+      // Last resort: safe stringify (avoid crashing React by rendering objects)
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return "Request failed";
+      }
+    }
+
+    return "Request failed";
+  };
+
   const message =
-    data?.message ||
-    data?.error ||
-    err?.message ||
+    pickStringMessage(data?.message) ||
+    pickStringMessage(data?.error) ||
+    pickStringMessage(err?.message) ||
     "Request failed";
+
   return { message, status, details: data };
 }
