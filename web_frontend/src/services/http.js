@@ -21,22 +21,38 @@ function computeBaseURL() {
   // Normalize trailing slash
   if (base) return base.endsWith("/") ? base.slice(0, -1) : base;
 
-  // Best-effort auto-detection for local/dev and Kavia multi-port deployments.
-  // Uses same protocol/hostname as the UI but switches to the backend port.
+  /**
+   * Best-effort auto-detection for local/dev and Kavia deployments.
+   *
+   * Important: in hosted environments the public URL may not expose an explicit
+   * ":3000" port even though the underlying container maps ports. Blindly
+   * forcing ":3001" can produce an unreachable host => Axios "Network Error".
+   *
+   * Strategy:
+   * - If the current URL explicitly has port 3000, swap to 3001.
+   * - If the current URL has *some* explicit port, still swap to 3001 (matches
+   *   typical dev setups), but only when a port is present.
+   * - If there's no explicit port in the URL, assume reverse-proxying and use
+   *   same-origin (empty baseURL).
+   */
   try {
     if (typeof window !== "undefined" && window.location) {
       const url = new URL(window.location.href);
-      // If UI runs on 3000 (or anything else), default backend to 3001.
-      url.port = "3001";
-      url.pathname = "";
-      url.search = "";
-      url.hash = "";
-      return url.toString().replace(/\/$/, "");
+
+      // If the origin has an explicit port, we can safely switch to 3001.
+      if (url.port) {
+        url.port = "3001";
+        url.pathname = "";
+        url.search = "";
+        url.hash = "";
+        return url.toString().replace(/\/$/, "");
+      }
     }
   } catch {
     // ignore; fall back to same-origin
   }
 
+  // Same-origin (useful when a reverse proxy routes /api to backend).
   return "";
 }
 
